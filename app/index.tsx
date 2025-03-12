@@ -1,24 +1,28 @@
 import { View, Dimensions, FlatList, StyleSheet, Pressable } from "react-native";
-import { Video, ResizeMode } from "expo-av";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useRef, useState } from "react";
+import { useEvent } from "expo";
 
 const videos = [
-  "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-  "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-  "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-  "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-  "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
 ];
 
 export default function Index() {
   const [currentViewableItemIndex, setCurrentViewableItemIndex] = useState(0);
   const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 };
+
   const onViewableItemsChanged = ({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       setCurrentViewableItemIndex(viewableItems[0].index ?? 0);
     }
   };
+
   const viewabilityConfigCallbackPairs = useRef([{ viewabilityConfig, onViewableItemsChanged }]);
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -35,24 +39,43 @@ export default function Index() {
 }
 
 const Item = ({ item, shouldPlay }: { shouldPlay: boolean; item: string }) => {
-  const video = React.useRef<Video | null>(null);
   const [status, setStatus] = useState<any>(null);
+  
+  const player = useVideoPlayer(item, (player) => {
+    player.loop = true;
+    player.play();
+  });
+
+  // Listen for status updates
+  const { status: playerStatus } = useEvent(player, "statusChange", { status: player.status });
 
   useEffect(() => {
-    if (!video.current) return;
+    if (playerStatus) {
+      setStatus(playerStatus);
+    }
+  }, [playerStatus]);
 
+  useEffect(() => {
+    if (!player) return;
     if (shouldPlay) {
-      video.current.playAsync();
+      player.play();
     } else {
-      video.current.pauseAsync();
-      video.current.setPositionAsync(0);
+      player.pause();
+      player.currentTime=0;
     }
   }, [shouldPlay]);
 
   return (
-    <Pressable onPress={() => (status.isPlaying ? video.current?.pauseAsync() : video.current?.playAsync())}>
+    <Pressable onPress={() => (status?.isPlaying ? player.pause() : player.play())}>
       <View style={styles.videoContainer}>
-        <Video ref={video} source={{ uri: item }} style={styles.video} isLooping resizeMode={ResizeMode.COVER} useNativeControls={false} onPlaybackStatusUpdate={(status) => setStatus(() => status)} />
+        <VideoView
+          style={styles.video}
+          player={player}
+          contentFit="cover"
+          allowsFullscreen
+          allowsPictureInPicture
+          nativeControls={false}
+        />
       </View>
     </Pressable>
   );
@@ -71,3 +94,4 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 });
+
