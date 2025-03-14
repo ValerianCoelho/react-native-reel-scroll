@@ -41,7 +41,8 @@
     "react-native-webview": "13.12.5",
     "expo-av": "~15.0.2",
     "expo-video": "~2.0.5",
-    "expo-dev-client": "~5.0.12"
+    "expo-dev-client": "~5.0.12",
+    "@react-native-community/slider": "4.5.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

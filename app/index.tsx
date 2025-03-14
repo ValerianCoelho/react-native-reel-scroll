@@ -1,7 +1,8 @@
+import Slider from "@react-native-community/slider";
 import { useEvent } from "expo";
 import { useVideoPlayer, VideoSource, VideoView } from "expo-video";
 import React, { useEffect, useRef, useState } from "react";
-import { View, FlatList, Dimensions, StyleSheet, SafeAreaView, Text, ViewToken, Pressable } from "react-native";
+import { FlatList, Dimensions, StyleSheet, SafeAreaView, Text, View, Pressable } from "react-native";
 
 const videos = [
   "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
@@ -13,14 +14,18 @@ const videos = [
 
 const { width, height } = Dimensions.get("window");
 
+
 function Reel({ videoLink, shouldPlay }: { videoLink: VideoSource; shouldPlay: boolean }) {
   const player = useVideoPlayer(videoLink, (player) => {
     player.loop = true;
   });
 
-  const { isPlaying } = useEvent(player, 'playingChange', {
+  const { isPlaying } = useEvent(player, "playingChange", {
     isPlaying: player.playing,
   });
+
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(1); // Default to 1 to avoid division by zero
 
   useEffect(() => {
     console.log("Reel Mounted:", videoLink);
@@ -35,22 +40,48 @@ function Reel({ videoLink, shouldPlay }: { videoLink: VideoSource; shouldPlay: b
       player.play();
     } else {
       player.pause();
-      player.currentTime = 0;
     }
   }, [shouldPlay]);
 
-  const handleClick = () => {
-    if(isPlaying) {
-      player.pause();
-    } else {
-      player.play();
-    }
-  }
+  useEffect(() => {
+    const updateProgress = () => {
+      setProgress(player.currentTime);
+      
+      // Only update duration if it's a valid number and not zero
+      if (player.duration && player.duration > 0) {
+        setDuration(player.duration);
+      }
+    };
+
+    const interval = setInterval(updateProgress, 500); // Update every 100ms
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSeek = (value: number) => {
+    player.currentTime = value;
+    setProgress(value);
+  };
 
   return (
     <Pressable style={styles.reelContainer}>
       <VideoView player={player} style={styles.reel} contentFit="cover" nativeControls={false} />
-      <Pressable style={styles.overlayTouchable} onPress={handleClick}></Pressable>
+
+      <Pressable style={styles.overlayTouchable} onPress={() => (isPlaying ? player.pause() : player.play())}></Pressable>
+
+      {/* Slider for Seeking */}
+      <View style={styles.sliderContainer}>
+        <Slider
+          style={{ width: "90%", height: 40 }}
+          minimumValue={0}
+          maximumValue={duration}
+          value={progress}
+          onSlidingComplete={handleSeek}
+          minimumTrackTintColor="#5C00CF"
+          maximumTrackTintColor="#888"
+          thumbTintColor="#5C00CF"
+        />
+      </View>
     </Pressable>
   );
 }
@@ -76,9 +107,8 @@ const FullScreenList = () => {
         pagingEnabled
         horizontal={false} // Vertical scrolling
         showsVerticalScrollIndicator={false}
-        snapToAlignment="start"
-        viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         decelerationRate="fast"
+        viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         initialNumToRender={3}
         maxToRenderPerBatch={2}
         windowSize={2}
@@ -100,6 +130,7 @@ const styles = StyleSheet.create({
   reelContainer: {
     width: width,
     height: height, // Each item takes full screen
+    position: "relative",
   },
   reel: {
     width: "100%",
@@ -111,6 +142,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  slider: {
+    position: "absolute",
+    bottom: 20,
+    width: "90%",
+    alignSelf: "center",
+  },
+   sliderContainer: {
+    position: "absolute",
+    bottom: 20, // Adjust as needed
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingHorizontal: 20,
   },
 });
 
