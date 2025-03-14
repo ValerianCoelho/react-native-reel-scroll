@@ -1,13 +1,13 @@
 import { useEvent } from "expo";
 import { useVideoPlayer, VideoSource, VideoView } from "expo-video";
 import React, { useEffect, useRef, useState } from "react";
-import { View, FlatList, Dimensions, StyleSheet, SafeAreaView, Text, ViewToken } from "react-native";
+import { View, FlatList, Dimensions, StyleSheet, SafeAreaView, Text, ViewToken, Pressable } from "react-native";
 
 const videos = [
+  "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
   "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
   "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
   "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-  "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
   "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
 ];
 
@@ -18,9 +18,17 @@ function Reel({ videoLink, shouldPlay }: { videoLink: VideoSource; shouldPlay: b
     player.loop = true;
   });
 
-  // const { isPlaying } = useEvent(player, 'playingChange', {
-  //   isPlaying: player.playing,
-  // });
+  const { isPlaying } = useEvent(player, 'playingChange', {
+    isPlaying: player.playing,
+  });
+
+  useEffect(() => {
+    console.log("Reel Mounted:", videoLink);
+
+    return () => {
+      console.log("Reel Unmounted:", videoLink);
+    };
+  }, []);
 
   useEffect(() => {
     if (shouldPlay) {
@@ -31,10 +39,19 @@ function Reel({ videoLink, shouldPlay }: { videoLink: VideoSource; shouldPlay: b
     }
   }, [shouldPlay]);
 
+  const handleClick = () => {
+    if(isPlaying) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }
+
   return (
-    <View style={styles.reelContainer}>
-      <VideoView player={player} style={styles.reel} contentFit="cover" />
-    </View>
+    <Pressable style={styles.reelContainer}>
+      <VideoView player={player} style={styles.reel} contentFit="cover" nativeControls={false} />
+      <Pressable style={styles.overlayTouchable} onPress={handleClick}></Pressable>
+    </Pressable>
   );
 }
 
@@ -50,10 +67,6 @@ const FullScreenList = () => {
 
   const viewabilityConfigCallbackPairs = useRef([{ viewabilityConfig, onViewableItemsChanged }]);
 
-  useEffect(() => {
-    console.log(currentViewableItemIndex);
-  }, [currentViewableItemIndex]);
-
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
@@ -66,6 +79,9 @@ const FullScreenList = () => {
         snapToAlignment="start"
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
         decelerationRate="fast"
+        initialNumToRender={3}
+        maxToRenderPerBatch={2}
+        windowSize={2}
       />
     </SafeAreaView>
   );
@@ -88,6 +104,13 @@ const styles = StyleSheet.create({
   reel: {
     width: "100%",
     height: "100%",
+  },
+  overlayTouchable: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
 });
 
