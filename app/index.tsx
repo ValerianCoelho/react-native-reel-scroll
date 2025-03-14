@@ -1,21 +1,23 @@
-import { View, Dimensions, FlatList, StyleSheet, Pressable } from "react-native";
-import { useVideoPlayer, VideoView } from "expo-video";
-import React, { useEffect, useRef, useState } from "react";
-import { useEvent } from "expo";
+import { View, Dimensions, FlatList, StyleSheet, Pressable } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useEvent } from 'expo';
+
+const { height, width } = Dimensions.get('window');
 
 const videos = [
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+  'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
 ];
 
 export default function Index() {
   const [currentViewableItemIndex, setCurrentViewableItemIndex] = useState(0);
   const viewabilityConfig = { viewAreaCoveragePercentThreshold: 50 };
 
-  const onViewableItemsChanged = ({ viewableItems }: any) => {
+  const onViewableItemsChanged = ({ viewableItems }) => {
     if (viewableItems.length > 0) {
       setCurrentViewableItemIndex(viewableItems[0].index ?? 0);
     }
@@ -27,55 +29,48 @@ export default function Index() {
     <View style={styles.container}>
       <FlatList
         data={videos}
-        renderItem={({ item, index }) => <Item item={item} shouldPlay={index === currentViewableItemIndex} />}
+        renderItem={({ item, index }) => (
+          <Item item={item} shouldPlay={index === currentViewableItemIndex} />
+        )}
         keyExtractor={(item) => item}
         pagingEnabled
-        horizontal={false}
-        showsVerticalScrollIndicator={false}
+        // horizontal={false}
+        // showsVerticalScrollIndicator={false}
         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
+        // initialNumToRender={2} // Render 3 items initially
+        windowSize={3} // Keep 3 items in memory
+        // maxToRenderPerBatch={2} // Render 3 at a time
+        // removeClippedSubviews={true} // Unmount off-screen items
+        // snapToInterval={height} // Snap to full-screen video
+        snapToAlignment="start"
+        decelerationRate="fast" // Faster scrolling like Instagram
       />
     </View>
   );
 }
 
-const Item = ({ item, shouldPlay }: { shouldPlay: boolean; item: string }) => {
-  const [status, setStatus] = useState<any>(null);
-  
+const Item = ({ item, shouldPlay }) => {
   const player = useVideoPlayer(item, (player) => {
-    player.loop = true;
-    player.play();
+    player.loop = true; // Enable looping
   });
 
-  // Listen for status updates
-  const { status: playerStatus } = useEvent(player, "statusChange", { status: player.status });
+  const { isPlaying } = useEvent(player, 'playingChange', {
+    isPlaying: player.playing,
+  });
 
   useEffect(() => {
-    if (playerStatus) {
-      setStatus(playerStatus);
-    }
-  }, [playerStatus]);
-
-  useEffect(() => {
-    if (!player) return;
     if (shouldPlay) {
       player.play();
     } else {
       player.pause();
-      player.currentTime=0;
+      player.currentTime = 0; // Reset to beginning
     }
   }, [shouldPlay]);
 
   return (
-    <Pressable onPress={() => (status?.isPlaying ? player.pause() : player.play())}>
+    <Pressable onPress={() => (isPlaying ? player.pause() : player.play())}>
       <View style={styles.videoContainer}>
-        <VideoView
-          style={styles.video}
-          player={player}
-          contentFit="cover"
-          allowsFullscreen
-          allowsPictureInPicture
-          nativeControls={false}
-        />
+        <VideoView style={styles.video} player={player} contentFit='cover' />
       </View>
     </Pressable>
   );
@@ -86,12 +81,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   videoContainer: {
-    width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height,
+    width,
+    height,
   },
   video: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
 });
-
